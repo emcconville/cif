@@ -145,13 +145,25 @@ CGFloat (^stringToPercent)(NSString *) = ^(NSString *token)
  * @brief Read user image at given file path
  * @discussion Standard POSIX URI protocols are expected, and will verify path
  *             is reachable. Loads content of URI into CIImage
+ *
+ *             If filepath begins with 'PATTERN:', then assume we're
+ *             loading a embeded pattern/tile image
+ *
  * @param filename POSIX path to load resource
  * @returns CIImage
  * @throws Exception when CIImage is unable to be allocated
  */
 CIImage * (^readInputImage)(NSString *) = ^(NSString * filename) {
-    NSURL * uri = toReadableURL(filename);
-    CIImage * source = [CIImage imageWithContentsOfURL:uri];
+    CIImage * source;
+    /* Scan for known pattern prefix */
+    NSString * patternProtocol = @"pattern:";
+    NSUInteger patternLength= [patternProtocol length];
+    if ([[filename substringToIndex:patternLength] caseInsensitiveCompare:patternProtocol] == NSOrderedSame) {
+        source = [CIImage imageWithName:[filename substringFromIndex:patternLength]];
+    } else {
+        NSURL * uri = toReadableURL(filename);
+        source = [CIImage imageWithContentsOfURL:uri];
+    }
     if (source == nil) {
         throwException(@"Unable to read input image");
     }
@@ -669,7 +681,6 @@ int main(int argc, const char * argv[]) {
         NSDictionary * properties;
         NSURL * outputURL;
         
-        BOOL requireSize = NO;
         CGRect requiredRect;
         
         CIFilter *filter;
@@ -725,18 +736,6 @@ int main(int argc, const char * argv[]) {
             filter = [CIFilter filterWithName:filterName];
             if (filter) {
                 [filter setDefaults];
-                /* Peek ahead if filter needs size */
-                if ([@[@"CIConstantColorGenerator", @"CIStarShineGenerator", @"CIRandomGenerator", @"CICheckerboardGenerator", @"CIStripesGenerator"] containsObject:filterName]) {
-                    requireSize = YES;
-                    argument = [args valueForKey:@"size"];
-                    if (argument == nil || argument.length < 3) {
-                        message = [NSString stringWithFormat:@"%@ requires `-size' to be defined", filterName];
-                        throwException(message);
-                    }
-                    requiredRect = readInputSize(argument);
-                    
-                    [args removeObjectForKey:@"size"];
-                }
                 
                 inputKeys = [filter inputKeys];
                 for (key in inputKeys) {
@@ -765,11 +764,14 @@ int main(int argc, const char * argv[]) {
                 if (outputPath != nil) {
                     outputImage = [filter outputImage];
                     if (outputImage) {
-                        if (requireSize) {
-                            outputImage = [outputImage imageByCroppingToRect:requiredRect];
-                        }
                         if (CGRectIsInfinite([outputImage extent])) {
-                            throwException(@"Output image is infinite, did you define `-size'?");
+                            /* Attempt to read -size, as new image is unbounded */
+                            argument = [args valueForKey:@"size"];
+                            if (argument == nil) {
+                                throwException(@"Output image is infinite, did you define `-size'?");
+                            }
+                            requiredRect = readInputSize(argument);
+                            outputImage = [outputImage imageByCroppingToRect:requiredRect];
                         }
                         dumpToFile(outputImage, outputURL);
                     } else {
