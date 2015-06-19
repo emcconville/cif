@@ -4,6 +4,15 @@ A command-line interface (CLI) for OS X's Core Image Filters.
 
 ## Getting & Building
 
+To build from source
+
+    git clone https://github.com/emcconville/cif.git && cd cif
+    xcodebuild -scheme cif -configuration 'Release' \
+               CONFIGURATION_BUILD_DIR=/tmp/  build
+    sudo cp -p /tmp/cif /usr/local/bin/cif
+
+For pre-built binaries, check https://github.com/emcconville/cif/releases
+
 ## Usage
 
 Basic usage can be described s ...
@@ -28,4 +37,29 @@ run the list command followed by the filter name.
     cif list CIGaussianBlur
 
 
-## Help
+## Included Batteries 
+
+### X11 Colornames
+
+Standard [X11 colors](https://en.wikipedia.org/wiki/X11_color_names) are
+included. Input arguments will accept values like: `-inputColor Cyan`
+
+
+### Patterns
+
+ImageMagick's inventory of tile patterns have been included. Any image input
+arguments can leverage these patterns by prefixing a pattern name with `patern:`
+string. Example `-inputImage pattern:bricks`. Note patterns are unbound
+(infinite) in nature, so an additional `-size WIDTHxHEIGHT` will be required.
+
+### Tab Completion
+
+The bash script [CifGetOpt.sh](CifGetOpt.sh) should be sourced, or contents
+copied to your `.bashrc`, or `.bash_profile` file. Tab behavior as follows:
+
+    cif CIBl[TAB]
+    # Will list available matching filters
+    cif CIBlool -input[TAB]
+    # Will list available input paramaters
+
+Note: Mileage will very based on environment configuration.

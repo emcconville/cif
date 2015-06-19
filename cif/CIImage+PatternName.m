@@ -943,6 +943,19 @@ static const IMPattern PatternList[] = {
     }
     IMPattern im_pattern = PatternList[index];
     NSData * blob = [NSData dataWithBytes:im_pattern.blob length:im_pattern.length];
-    return [CIImage imageWithData:blob];
+    CIImage * _self_ = [CIImage imageWithData:blob];
+    /* Patterns are infinate */
+    NSAffineTransformStruct transformStruct = {.m11=1,
+        .m12=0,
+        .m21=0,
+        .m22=1,
+        .tX=0,
+        .tY=0};
+    NSAffineTransform * transform = [NSAffineTransform transform];
+    [transform setTransformStruct:transformStruct];
+    CIFilter * inf = [CIFilter filterWithName:@"CIAffineTile"];
+    [inf setValue:_self_ forKey:@"inputImage"];
+    [inf setValue:transform forKey:@"inputTransform"];
+    return [inf outputImage];
 }
 @end

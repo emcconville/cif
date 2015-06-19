@@ -25,8 +25,10 @@ __CifGetOpt__()
             local words
             filter=${COMP_WORDS[1]}
             words=$( ${__cif} list $filter | grep -e '^ -' | cut -d ' ' -f 2)
-            COMPREPLY=( $( compgen -W "$words --" -- $phrase) )
+            COMPREPLY=( $( compgen -W "$words" -- $phrase) )
         ;;
     esac
     return 0;
 }
+
+complete -F __CifGetOpt__ -o default cif
