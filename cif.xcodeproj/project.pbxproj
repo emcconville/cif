@@ -8,6 +8,9 @@
 
 /* Begin PBXBuildFile section */
 		092558E41B31041C0083F797 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 092558E31B31041C0083F797 /* main.m */; };
+		092558EB1B3104AC0083F797 /* QuartzCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 092558EA1B3104AC0083F797 /* QuartzCore.framework */; };
+		092558F11B3185FF0083F797 /* CIColor+X11ColorName.m in Sources */ = {isa = PBXBuildFile; fileRef = 092558F01B3185FF0083F797 /* CIColor+X11ColorName.m */; };
+		092558F41B3242BF0083F797 /* CIImage+PatternName.m in Sources */ = {isa = PBXBuildFile; fileRef = 092558F31B3242BF0083F797 /* CIImage+PatternName.m */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -25,6 +28,13 @@
 /* Begin PBXFileReference section */
 		092558E01B31041C0083F797 /* cif */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = cif; sourceTree = BUILT_PRODUCTS_DIR; };
 		092558E31B31041C0083F797 /* main.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
+		092558EA1B3104AC0083F797 /* QuartzCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = QuartzCore.framework; path = System/Library/Frameworks/QuartzCore.framework; sourceTree = SDKROOT; };
+		092558EF1B3185FF0083F797 /* CIColor+X11ColorName.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "CIColor+X11ColorName.h"; sourceTree = "<group>"; };
+		092558F01B3185FF0083F797 /* CIColor+X11ColorName.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "CIColor+X11ColorName.m"; sourceTree = "<group>"; };
+		092558F21B3242BF0083F797 /* CIImage+PatternName.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "CIImage+PatternName.h"; sourceTree = "<group>"; };
+		092558F31B3242BF0083F797 /* CIImage+PatternName.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "CIImage+PatternName.m"; sourceTree = "<group>"; };
+		092558F51B32EF190083F797 /* README.md */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = SOURCE_ROOT; };
+		092558F81B3357A40083F797 /* CifGetOpt.sh */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; path = CifGetOpt.sh; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -32,6 +42,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				092558EB1B3104AC0083F797 /* QuartzCore.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -41,6 +52,8 @@
 		092558D71B31041C0083F797 = {
 			isa = PBXGroup;
 			children = (
+				092558F71B32EF340083F797 /* docs */,
+				092558EA1B3104AC0083F797 /* QuartzCore.framework */,
 				092558E21B31041C0083F797 /* cif */,
 				092558E11B31041C0083F797 /* Products */,
 			);
@@ -57,9 +70,22 @@
 		092558E21B31041C0083F797 /* cif */ = {
 			isa = PBXGroup;
 			children = (
+				092558EF1B3185FF0083F797 /* CIColor+X11ColorName.h */,
+				092558F01B3185FF0083F797 /* CIColor+X11ColorName.m */,
+				092558F21B3242BF0083F797 /* CIImage+PatternName.h */,
+				092558F31B3242BF0083F797 /* CIImage+PatternName.m */,
 				092558E31B31041C0083F797 /* main.m */,
 			);
 			path = cif;
+			sourceTree = "<group>";
+		};
+		092558F71B32EF340083F797 /* docs */ = {
+			isa = PBXGroup;
+			children = (
+				092558F51B32EF190083F797 /* README.md */,
+				092558F81B3357A40083F797 /* CifGetOpt.sh */,
+			);
+			name = docs;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -118,6 +144,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				092558F41B3242BF0083F797 /* CIImage+PatternName.m in Sources */,
+				092558F11B3185FF0083F797 /* CIColor+X11ColorName.m in Sources */,
 				092558E41B31041C0083F797 /* main.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -143,6 +171,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = "";
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu99;
@@ -185,6 +214,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = "";
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
