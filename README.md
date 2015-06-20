@@ -39,7 +39,7 @@ run the list command followed by the filter name.
 
 ## Included Batteries 
 
-### X11 Colornames
+### X11 Color Names
 
 Standard [X11 colors](https://en.wikipedia.org/wiki/X11_color_names) are
 included. Input arguments will accept values like: `-inputColor Cyan`
@@ -49,8 +49,10 @@ included. Input arguments will accept values like: `-inputColor Cyan`
 
 ImageMagick's inventory of tile patterns have been included. Any image input
 arguments can leverage these patterns by prefixing a pattern name with `patern:`
-string. Example `-inputImage pattern:bricks`. Note patterns are unbound
-(infinite) in nature, so an additional `-size WIDTHxHEIGHT` will be required.
+string. Example `-inputImage pattern:bricks`.
+
+> *Note:* Patterns are unbound (infinite) in nature, so an additional
+> `-size WIDTHxHEIGHT` will be required.
 
 ### Tab Completion
 
