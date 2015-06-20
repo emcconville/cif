@@ -235,14 +235,19 @@
 		092558E81B31041C0083F797 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				COPY_PHASE_STRIP = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SYMROOT = /tmp/cif.dst;
 			};
 			name = Debug;
 		};
 		092558E91B31041C0083F797 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				COPY_PHASE_STRIP = YES;
+				DEBUG_INFORMATION_FORMAT = dwarf;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SYMROOT = /tmp/cif.dst;
 			};
 			name = Release;
 		};
