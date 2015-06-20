@@ -573,9 +573,11 @@ void listFilterArgumentsFor(NSString * filterName)
 
 #pragma mark - Application
 
+#define xstr(s) str(s)
+#define str(s) #s
 
 #ifndef CIF_VERSION
-#define CIF_VERSION "1.0"
+#define CIF_VERSION 1.0
 #endif
 
 #ifndef CIF_RELEASE_DATE
@@ -593,9 +595,9 @@ static const char * _version = "Version: cif %s %s %s\n"
 
 void version() {
     fprintf(stdout, _version,
-            CIF_VERSION,
-            CIF_RELEASE_DATE,
-            CIF_RELEASE_URL);
+            xstr(CIF_VERSION),
+            xstr(CIF_RELEASE_DATE),
+            xstr(CIF_RELEASE_URL));
 }
 
 static const char * _usage = ""
@@ -612,7 +614,7 @@ void usage() {
 };
 
 
-static const char * _help = ""
+static const char * _help = "\n"
 "Commands\n"
 "--------\n"
 "\n"
@@ -624,7 +626,7 @@ static const char * _help = ""
 "list <CIFilter> Display description of Core Image filter, and list all input\n"
 "                parameters. Each parameter hints expected format, and default\n"
 "                value.\n"
-"version, -v     Print current version header."
+"version, -v     Print current version header.\n"
 "\n"
 "Types\n"
 "-----\n"
