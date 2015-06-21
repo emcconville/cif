@@ -757,6 +757,8 @@ int main(int argc, const char * argv[]) {
                         [filter setValue:readInputColor(argument) forKey:key];
                     } else if ([_type isEqualToString:@"NSAffineTransform"]) {
                         [filter setValue:readInputTransform(argument) forKey:key];
+                    } else if ([_type isEqualToString:@"NSString"]) {
+                        [filter setValue:argument forKey:key];
                     } else {
                         message = [NSString stringWithFormat:@"Don't know how to handle -%@.", key];
                         throwException(message);
