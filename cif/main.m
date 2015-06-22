@@ -41,9 +41,7 @@ void (^throwException)(NSString *) = ^(NSString *message) {
 NSURL * (^toURL)(NSString *) = ^(NSString * filename)
 {
     NSURL * uri;
-    if ([filename caseInsensitiveCompare:@"STDIN"] == NSOrderedSame) {
-        uri = [NSURL fileURLWithPath:@"/dev/stdin" isDirectory:NO];
-    } else if ([filename caseInsensitiveCompare:@"STDOUT"] == NSOrderedSame) {
+    if ([filename caseInsensitiveCompare:@"STDOUT"] == NSOrderedSame) {
         uri = [NSURL fileURLWithPath:@"/dev/stdout" isDirectory:NO];
     } else {
         uri = [NSURL fileURLWithPath:filename isDirectory:NO];
@@ -142,6 +140,19 @@ CGFloat (^stringToPercent)(NSString *) = ^(NSString *token)
 
 
 /**
+ * @brief Read user image from File Descriptor.
+ * @discussion Application will halt until the EOF is read from stdin.
+ * @returns CIImage or nil
+ */
+CIImage * (^readStandardInputImage)() = ^(){
+    NSFileHandle *stdInput = [NSFileHandle fileHandleWithStandardInput];
+    NSData * blob = [NSData dataWithData:[stdInput readDataToEndOfFile]];
+    CIImage * source = [CIImage imageWithData:blob];
+    return source;
+};
+
+
+/**
  * @brief Read user image at given file path
  * @discussion Standard POSIX URI protocols are expected, and will verify path
  *             is reachable. Loads content of URI into CIImage
@@ -158,9 +169,11 @@ CIImage * (^readInputImage)(NSString *) = ^(NSString * filename) {
     /* Scan for known pattern prefix */
     NSString * patternProtocol = @"pattern:";
     NSUInteger patternLength= [patternProtocol length];
-    if ([[filename substringToIndex:patternLength] caseInsensitiveCompare:patternProtocol] == NSOrderedSame) {
+    if ([filename length] > patternLength && [[filename substringToIndex:patternLength] caseInsensitiveCompare:patternProtocol] == NSOrderedSame) {
         source = [CIImage imageWithName:[filename substringFromIndex:patternLength]];
-    } else {
+    } else if ([filename caseInsensitiveCompare:@"stdin"] == NSOrderedSame) {
+        source = readStandardInputImage();
+    }else {
         NSURL * uri = toReadableURL(filename);
         source = [CIImage imageWithContentsOfURL:uri];
     }
@@ -438,7 +451,12 @@ void (^dumpToFile)(CIImage *, NSURL *) = ^(CIImage * source, NSURL * uri)
         blob = [rep representationUsingType:NSGIFFileType properties:nil];
     } else if ([ext caseInsensitiveCompare:@"BMP"] == NSOrderedSame) {
         blob = [rep representationUsingType:NSBMPFileType properties:nil];
+    } else if ([[uri description] isEqualTo:@"file:///dev/stdout"]) {
+        // Let's default to PNG until we can figure out how we should
+        // handle anonymous formats. PNG being the correct OS default.
+        blob = [rep representationUsingType:NSPNGFileType properties:nil];
     } else {
+        NSLog(@"This dest is: %@", uri);
         NSString * message = [NSString stringWithFormat:@"Don't know how to write to %@ format", [ext uppercaseString]];
         throwException(message);
     }
@@ -632,20 +650,23 @@ static const char * _help = "\n"
 "-----\n"
 "\n"
 "<image>         A system path, or URL, to an image resource.\n"
+"                Use `STDIN' to read image from stdard input.\n"
 "<data>          UTF-8 string message. If the first character is an at-sign (@)\n"
 "                then argument is assumed to be a path to a file to read data\n"
 "                from.\n"
 "<number>        A literal number. Integreals, and rational numbers are\n"
 "                expected.\n"
-"<vector>        A comma-separated list of numbers. Example: \"0.1,2,3.45\"\n"
+"<vector>        A comma-separated list of numbers.\n"
+"                Example: \n"
+"                   \"0.1,2,3.45\"\n"
 "<color>         Common hex-triplet, name, or vector, representing a RGB color.\n"
 "                Examples:\n"
-"                     #F0F : Short-hand hex-triplet\n"
-"                  #FF00FF : Hex-triplet\n"
-"                #FF00FFFF : Hex-triplet (plus alpha-channel)\n"
-"                    1,0,1 : Vector\n"
-"                  1,0,1,1 : Vector (with alpha-channel)\n"
-"                  magenta : X11 color name\n"
+"                    #F0F      : Short-hand hex-triplet\n"
+"                    #FF00FF   : Hex-triplet\n"
+"                    #FF00FFFF : Hex-triplet (plus alpha-channel)\n"
+"                    1,0,1     : Vector\n"
+"                    1,0,1,1   : Vector (with alpha-channel)\n"
+"                    magenta   : X11 color name\n"
 "<affine> or\n"
 "<transform>     A common affine-transfromation function. Supported fromats\n"
 "                are:\n"
