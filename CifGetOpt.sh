@@ -7,7 +7,6 @@ __CifGetOpt__() {
  local C=${COMP_WORDS[0]}
  local F
  local P=${COMP_WORDS[COMP_CWORD]}
- local R=()
  local W
  case "$P" in
    CI*)
@@ -17,10 +16,9 @@ __CifGetOpt__() {
    -*)
     F=${COMP_WORDS[1]}
     W=$(${C} list $F|grep -e '^ -'|cut -d ' ' -f 2)
-    R=($( compgen -W "$W" -- $P))
+    COMPREPLY=($( compgen -W "$W" -- $P))
     ;;
  esac
- COMPREPLY=R
  return 0;
 }
 
