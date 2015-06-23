@@ -9,6 +9,97 @@
 #import "CIColor+X11ColorName.h"
 
 
+/**
+ * @brief Convert four-bit hex (0xF) to number between 0.0 & 1.0
+ * @param bit Hex string to be converted
+ * @return CGFloat
+ */
+CGFloat (^fourBitToDouble)(NSString *) = ^(NSString * bit)
+{
+    unsigned int unsigned_bit;
+    [[NSScanner scannerWithString:bit] scanHexInt:&unsigned_bit];
+    return unsigned_bit  / 15.0;
+};
+
+/**
+ * @brief Convert eight-bit hex (0xFF) to number between 0.0 & 1.0
+ * @param bits Hex string to be converted
+ * @return CGFloat
+ */
+CGFloat (^eightBitToDouble)(NSString *) = ^(NSString * bits)
+{
+    unsigned int unsigned_bit;
+    [[NSScanner scannerWithString:bits] scanHexInt:&unsigned_bit];
+    return unsigned_bit  / 255.0;
+};
+
+/**
+ * @brief Convert string to normalized number between 0.0 & 1.0.
+ * @discussion Accepts strings like `100%', `100', and `1.0'.
+ *             Quantum range (ceiling) is defined by ``scale``.
+ * @param userNumber The number to evaluate.
+ * @param scale The ceiling of the literal number range to evaluate.
+ * @return CGFloat between 0.0 & 1.0 (this range is enforced.)
+ */
+CGFloat (^quantizeNumber)(NSString *, NSNumber *) = ^(NSString * userNumber, NSNumber * scale)
+{
+    CGFloat quantize = 0.0;
+
+    /** Formatter **/
+    NSNumberFormatter * percent = [[NSNumberFormatter alloc] init];
+    [percent setNumberStyle:NSNumberFormatterPercentStyle];
+    NSNumberFormatter * decimal = [[NSNumberFormatter alloc] init];
+    [decimal setNumberStyle:NSNumberFormatterDecimalStyle];
+
+    if ([userNumber hasSuffix:@"%"]) {
+        quantize = [[percent numberFromString:userNumber] doubleValue];
+    } else if ([userNumber rangeOfString:@"."].location != NSNotFound) {
+        quantize = [[decimal numberFromString:userNumber] doubleValue];
+    } else {
+        quantize = [[decimal numberFromString:userNumber] doubleValue] / [scale doubleValue];
+    }
+
+    while (quantize > 1.0) { quantize -= 1.0; }
+    while (quantize < 0.0) { quantize += 1.0; }
+
+    return quantize;
+};
+
+NSArray * (^colorFunctionToArray)(NSString *) = ^(NSString * input)
+{
+    NSString * command, * arguments, * chunk;
+    NSMutableArray * returnArray = [NSMutableArray array];
+    /** Function Scanner **/
+    NSCharacterSet * ignore = [NSCharacterSet characterSetWithCharactersInString:@" \t\n\r"];
+    NSCharacterSet * open = [NSCharacterSet characterSetWithCharactersInString:@"("];
+    NSCharacterSet * close = [NSCharacterSet characterSetWithCharactersInString:@")"];
+    NSCharacterSet * comma = [NSCharacterSet characterSetWithCharactersInString:@","];
+    NSScanner * numberScanner;
+    NSScanner * scanner = [NSScanner scannerWithString:input];
+    [scanner setCharactersToBeSkipped:ignore];
+    [scanner setCaseSensitive:NO];
+    while ([scanner isAtEnd] == NO) {
+        [scanner scanUpToCharactersFromSet:open intoString:&command];
+        [scanner setScanLocation:[scanner scanLocation] + 1];
+        [scanner scanUpToCharactersFromSet:close intoString:&arguments];
+        [scanner setScanLocation:[scanner scanLocation] + 1];
+        if ( arguments != nil && [arguments length] > 0) {
+            [returnArray addObject:command];
+            numberScanner = [NSScanner scannerWithString:arguments];
+            [numberScanner setCharactersToBeSkipped:ignore];
+            while ([numberScanner isAtEnd] == NO) {
+                [numberScanner scanUpToCharactersFromSet:comma intoString:&chunk];
+                [returnArray addObject:chunk];
+                if ([numberScanner isAtEnd] == NO) {
+                    [numberScanner setScanLocation:[numberScanner scanLocation] + 1];
+                }
+            }
+        }
+    }
+    return [returnArray copy];
+};
+
+
 @implementation CIColor (X11ColorName)
 
 +(CIColor *)colorWithName:(NSString *)colorname
@@ -672,7 +763,7 @@
                               @"yellow4" : @"[0.545098 0.545098 0]",
                               @"yellowgreen" : @"[0.603922 0.803922 0.196078]",
                               };
-    NSString * vectorString = [colors objectForKey:[colorname lowercaseString]];
+    NSString * vectorString = [colors objectForKey:colorname];
     if ( vectorString == nil) { return nil; }
     CIVector * vector = [CIVector vectorWithString:vectorString];
     CIColor * this = nil;
@@ -685,4 +776,83 @@
     return this;
 }
 
++(CIColor *)colorWithHue:(CGFloat)hue saturation:(CGFloat)saturation brightness:(CGFloat)brightness alpha:(CGFloat)alpha
+{
+    NSColor * tmp = [NSColor colorWithHue:hue
+                               saturation:saturation
+                               brightness:brightness
+                                    alpha:alpha];
+    return [CIColor colorWithRed:[tmp redComponent]
+                           green:[tmp greenComponent]
+                            blue:[tmp blueComponent]
+                           alpha:[tmp alphaComponent]];
+}
+
++(CIColor *)colorWithHexString:(NSString *)hexTriplet
+{
+    CGFloat R,G,B,A;
+    CIColor * color = nil;
+    long length = [hexTriplet length];
+    if ( length == 3 ) {
+        // RGB
+        R = fourBitToDouble([hexTriplet substringWithRange:NSMakeRange(0,1)]);
+        G = fourBitToDouble([hexTriplet substringWithRange:NSMakeRange(1,1)]);
+        B = fourBitToDouble([hexTriplet substringWithRange:NSMakeRange(2,1)]);
+        color = [CIColor colorWithRed:R green:G blue:B];
+    } else if ( length == 6 ) {
+        // RRGGBB
+        R = eightBitToDouble([hexTriplet substringWithRange:NSMakeRange(0,2)]);
+        G = eightBitToDouble([hexTriplet substringWithRange:NSMakeRange(2,2)]);
+        B = eightBitToDouble([hexTriplet substringWithRange:NSMakeRange(4,2)]);
+        color = [CIColor colorWithRed:R green:G blue:B];
+    } else if ( length == 8 ) {
+        // RRGGBBAA
+        R = eightBitToDouble([hexTriplet substringWithRange:NSMakeRange(0,2)]);
+        G = eightBitToDouble([hexTriplet substringWithRange:NSMakeRange(2,2)]);
+        B = eightBitToDouble([hexTriplet substringWithRange:NSMakeRange(4,2)]);
+        A = eightBitToDouble([hexTriplet substringWithRange:NSMakeRange(6,2)]);
+        color = [CIColor colorWithRed:R green:G blue:B alpha:A];
+    }
+    return color;
+}
++(CIColor *)colorWithRgbString:(NSString *)rgbString
+{
+    NSArray * parts = colorFunctionToArray(rgbString);
+    NSString * chunk = [parts objectAtIndex:0];
+    CIColor * color = nil;
+    CGFloat R,G,B,A;
+    if ([chunk isEqualToString:@"rgba"] && [parts count] == 5) {
+        R = quantizeNumber([parts objectAtIndex:1], @255);
+        G = quantizeNumber([parts objectAtIndex:2], @255);
+        B = quantizeNumber([parts objectAtIndex:3], @255);
+        A = quantizeNumber([parts objectAtIndex:4], @255);
+        color = [CIColor colorWithRed:R green:G blue:B alpha:A];
+    } else if ([chunk isEqualToString:@"rgb"] && [parts count] == 4) {
+        R = quantizeNumber([parts objectAtIndex:1], @255);
+        G = quantizeNumber([parts objectAtIndex:2], @255);
+        B = quantizeNumber([parts objectAtIndex:3], @255);
+        color = [CIColor colorWithRed:R green:G blue:B];
+    }
+    return color;
+}
++(CIColor *)colorWithHslString:(NSString *)hslString
+{
+    NSArray * parts = colorFunctionToArray(hslString);
+    NSString * chunk = [parts objectAtIndex:0];
+    CIColor * color = nil;
+    CGFloat H,S,L,A;
+    if ([chunk isEqualToString:@"hsla"] && [parts count] == 5) {
+        H = quantizeNumber([parts objectAtIndex:1], @360);
+        S = quantizeNumber([parts objectAtIndex:2], @100);
+        L = quantizeNumber([parts objectAtIndex:3], @100);
+        A = quantizeNumber([parts objectAtIndex:4], @1);
+        color = [CIColor colorWithHue:H saturation:S brightness:L alpha:A];
+    } else if ([chunk isEqualToString:@"hsl"] && [parts count] == 4) {
+        H = quantizeNumber([parts objectAtIndex:1], @360);
+        S = quantizeNumber([parts objectAtIndex:2], @100);
+        L = quantizeNumber([parts objectAtIndex:3], @100);
+        color = [CIColor colorWithHue:H saturation:S brightness:L alpha:1.0];
+    }
+    return color;
+}
 @end

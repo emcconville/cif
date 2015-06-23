@@ -82,60 +82,6 @@ NSURL * (^toWriteableURL)(NSString *) = ^(NSString * filename)
 };
 
 
-/**
- * @brief Convert four-bit hex (0xF) to number between 0.0 & 1.0
- * @param bit Hex string to be converted
- * @return CGFloat
- */
-CGFloat (^fourBitToDouble)(NSString *) = ^(NSString * bit)
-{
-    unsigned int unsigned_bit;
-    [[NSScanner scannerWithString:bit] scanHexInt:&unsigned_bit];
-    return unsigned_bit  / 15.0;
-};
-
-/**
- * @brief Convert eight-bit hex (0xFF) to number between 0.0 & 1.0
- * @param bits Hex string to be converted
- * @return CGFloat
- */
-CGFloat (^eightBitToDouble)(NSString *) = ^(NSString * bits)
-{
-    unsigned int unsigned_bit;
-    [[NSScanner scannerWithString:bits] scanHexInt:&unsigned_bit];
-    return unsigned_bit  / 255.0;
-};
-
-/**
- * @brief Convert number value to common double range.
- * @discussion String percent, and rational  values are convert
- * @param token String to evaluate with NSNumberFormatter
- */
-CGFloat (^stringToPercent)(NSString *) = ^(NSString *token)
-{
-    NSNumber * result;
-    NSNumberFormatter * rFormatter = [[NSNumberFormatter alloc] init];
-    NSNumberFormatter * pFormatter = [[NSNumberFormatter alloc] init];
-    [rFormatter setFormatterBehavior:NSNumberFormatterBehaviorDefault];
-    [rFormatter setNumberStyle:NSNumberFormatterNoStyle];
-    [pFormatter setFormatterBehavior:NSNumberFormatterBehaviorDefault];
-    [pFormatter setNumberStyle:NSNumberFormatterPercentStyle];
-    result = [pFormatter numberFromString:token];
-    if ( result == nil ) {
-        result = [rFormatter numberFromString:token];
-        if ( result == nil ) {
-            NSString * format = @"Unable to evaluate number value `%@'";
-            NSString * message = [NSString stringWithFormat:format, token];
-            throwException(message);
-        }
-        if ([result doubleValue] > 1.0) {
-            result = [NSNumber numberWithDouble:([result doubleValue] / 255.0)];
-        }
-    }
-    return (CGFloat)[result doubleValue];
-};
-
-
 #pragma mark Input
 
 
@@ -241,9 +187,12 @@ CIVector * (^readInputVector)(NSString *) = ^(NSString * token)
  *             <li><b>HEX RRGGBB</b> - <i>#FF00FF</i></li>
  *             <li><b>HEX RRGGBBAA</b> - <i>#FF00FFFF</i></li>
  *             <li><b>X11 Color names</b> - <i>Fuchsia</i></li>
+ *             <li><b>RGB functions</b> - <i>rgb(255, 00, 255)</i></li>
+ *             <li><b>RGBA functions</b> - <i>rgb(255, 00, 255, 0.75)</i></li>
+ *             <li><b>HSL functions</b> - <i>hsl(200, 50%, 50%)</i></li>
+ *             <li><b>HSLA functions</b> - <i>hsl(200, 50%, 50%, 0.75)</i></li>
  *             </ul>
  *
- *             Color functions [ <i>rgb(), hsl(), hsv(), & etc.</i> ] are planned.
  * @param token Color string
  * @return CIColor or nil
  * @todo Can be optimized
@@ -252,36 +201,17 @@ CIColor * (^readInputColor)(NSString *) = ^(NSString * token)
 {
     CIColor * color;
     CIVector * vector;
-    CGFloat R,G,B,A;
-    if ([token characterAtIndex:0] == '#') {
+    // All CIColor+X11ColorName methods require lowercase.
+    // Let's do it once, and assume it's been done before.
+    token = [token lowercaseString];
+    if ([token hasPrefix:@"#"]) {
         // We have a hex color
         token = [token substringFromIndex:1]; // Get rid of '#'
-        long length = [token length];
-        if ( length == 3 ) {
-            // RGB
-            R = fourBitToDouble([token substringWithRange:NSMakeRange(0,1)]);
-            G = fourBitToDouble([token substringWithRange:NSMakeRange(1,1)]);
-            B = fourBitToDouble([token substringWithRange:NSMakeRange(2,1)]);
-            
-            color = [CIColor colorWithRed:R green:G blue:B];
-        } else if ( length == 6 ) {
-            // RRGGBB
-            R = eightBitToDouble([token substringWithRange:NSMakeRange(0,2)]);
-            G = eightBitToDouble([token substringWithRange:NSMakeRange(2,2)]);
-            B = eightBitToDouble([token substringWithRange:NSMakeRange(4,2)]);
-            
-            color = [CIColor colorWithRed:R green:G blue:B];
-        } else if ( length == 8 ) {
-            // RRGGBBAA
-            R = eightBitToDouble([token substringWithRange:NSMakeRange(0,2)]);
-            G = eightBitToDouble([token substringWithRange:NSMakeRange(2,2)]);
-            B = eightBitToDouble([token substringWithRange:NSMakeRange(4,2)]);
-            A = eightBitToDouble([token substringWithRange:NSMakeRange(6,2)]);
-            color = [CIColor colorWithRed:R green:G blue:B alpha:A];
-            
-        } else {
-            throwException(@"Unable to read color format.");
-        }
+        color = [CIColor colorWithHexString:token];
+    } else if ([token hasPrefix:@"rgb"]) {
+        color = [CIColor colorWithRgbString:token];
+    } else if ([token hasPrefix:@"hsl"]) {
+        color = [CIColor colorWithHslString:token];
     } else {
         // Try to load color by name (brute-force = refactor later)
         color = [CIColor colorWithName:token];
@@ -301,6 +231,10 @@ CIColor * (^readInputColor)(NSString *) = ^(NSString * token)
                 throwException(@"Expecting color values as R,G,B,A format");
             }
         }
+    }
+    if (color == nil) {
+        NSString * message = [NSString stringWithFormat:@"Unable to understand color string `%@'", token];
+        throwException(message);
     }
     return color;
 };
