@@ -84,6 +84,55 @@ NSURL * (^toWriteableURL)(NSString *) = ^(NSString * filename)
 
 #pragma mark Input
 
+NSMutableArray * parseArguments(const char * argv[], int argc)
+{
+    NSString * keyword, * value;
+    NSMutableDictionary * kwargs = [[NSMutableDictionary alloc] init];
+    NSMutableArray * stack = [[NSMutableArray alloc] init];
+    for (int index = 1; index < argc; index++) {
+        keyword = [NSString stringWithUTF8String:argv[index]];
+        if ([keyword hasPrefix:@"-"] && [keyword length] > 1) {
+            // We have a keyword
+            index++;
+            if (index >= argc) {
+                // Not a keyword value
+                value = [NSString stringWithFormat:@"%@ argument expecting value", keyword];
+                throwException(value);
+            }
+            value = [NSString stringWithUTF8String:argv[index]];
+            keyword = [keyword substringFromIndex:1];
+        } else if ([kwargs count] == 0 && [keyword hasPrefix:@"CI"]) {
+            // Assume first instance ommits `-filter'
+            value = keyword;
+            keyword = @"filter";
+        } else {
+            if ([kwargs objectForKey:@"outputImage"] == nil) {
+                // Assume last token is output file
+                value = [keyword isEqualTo:@"-"] ? @"STDOUT" : keyword;
+                keyword = @"outputImage";
+            } else {
+                value = [NSString stringWithFormat:@"Unexpected argument `%@'", keyword];
+                throwException(value);
+            }
+        }
+        if ([kwargs objectForKey:keyword] == nil) {
+            [kwargs setObject:[value copy] forKey:[keyword copy]];
+        } else {
+            if ([keyword isEqualTo:@"filter"]) {
+                [stack addObject:[kwargs mutableCopy]];
+                kwargs = [[NSMutableDictionary alloc] init];
+                [kwargs setObject:[value copy] forKey:[keyword copy]];
+            } else {
+                throwException(@"Conflicting arguments, remove duplicate keys");
+            }
+        }
+    }
+    if ([kwargs count] > 0) {
+        [stack addObject:kwargs];
+    }
+    return stack;
+}
+
 
 /**
  * @brief Read user image from File Descriptor.
@@ -390,7 +439,6 @@ void (^dumpToFile)(CIImage *, NSURL *) = ^(CIImage * source, NSURL * uri)
         // handle anonymous formats. PNG being the correct OS default.
         blob = [rep representationUsingType:NSPNGFileType properties:nil];
     } else {
-        NSLog(@"This dest is: %@", uri);
         NSString * message = [NSString stringWithFormat:@"Don't know how to write to %@ format", [ext uppercaseString]];
         throwException(message);
     }
@@ -618,44 +666,66 @@ void help() {
     fprintf(stdout, "%s", _help);
 }
 
+void filterApply(CIFilter * filter, NSMutableDictionary *args)
+{
+    NSDictionary * properties;
+    NSString * argument, * key, * valueType, * message;
+    [filter setDefaults];
+    for (key in [filter inputKeys]) {
+        properties = [[filter attributes] valueForKey:key];
+        valueType = [properties valueForKey:kCIAttributeClass];
+        argument = [args valueForKey:key];
+        if (argument == nil) { continue; }
+        if ([valueType isEqualToString:@"CIImage"]) {
+            [filter setValue:readInputImage(argument) forKey:key];
+        } else if ([valueType isEqualToString:@"NSNumber"]) {
+            [filter setValue:@([argument doubleValue]) forKey:key];
+        } else if ([valueType isEqualToString:@"CIVector"]) {
+            [filter setValue:readInputVector(argument) forKey:key];
+        } else if ([valueType isEqualToString:@"NSData"]) {
+            [filter setValue:readInputMessage(argument) forKey:key];
+        } else if ([valueType isEqualToString:@"CIColor"]) {
+            [filter setValue:readInputColor(argument) forKey:key];
+        } else if ([valueType isEqualToString:@"NSAffineTransform"]) {
+            [filter setValue:readInputTransform(argument) forKey:key];
+        } else if ([valueType isEqualToString:@"NSString"]) {
+            [filter setValue:argument forKey:key];
+        } else {
+            message = [NSString stringWithFormat:@"Don't know how to handle -%@.", key];
+            throwException(message);
+        }
+    }
+    // Perhaps print out the ignored keys?
+}
+
+
 int main(int argc, const char * argv[]) {
     int RETURN_VALUE = 0;
     @autoreleasepool {
         if (argc < 2) { usage(); return 1; }
-        const char * action = argv[1];
-        const char * last = argv[argc-1];
         
         /* Prototype locals */
-        NSArray * inputKeys;
         NSString
-        * argument,
         * filterName,
-        * key,
         * message,
         * outputPath,
-        * _type;
+        * command,
+        * extent;
+
         NSMutableDictionary * args;
-        NSDictionary * properties;
+
         NSURL * outputURL;
         
-        CGRect requiredRect;
-        
-        CIFilter *filter;
-        CIImage *outputImage;
+        CIFilter * filter;
+        CIImage * outputImage;
+        NSArray * userFilters;
         
         @try {
         /** Read user input **/
-        args = [[[NSUserDefaults standardUserDefaults] volatileDomainForName:NSArgumentDomain] mutableCopy];
-        /** ^^ this should be a real argument parser **/
         
         /** Get required filter operation **/
-        filterName = [args valueForKey:@"filter"];
-        if(filterName) {
-            [args removeObjectForKey:@"filter"];
-        } else {
-            filterName = [NSString stringWithUTF8String:action];
-        }
-        if ([filterName isEqualToString:@"list"]) {
+        command = [NSString stringWithUTF8String:argv[1]];
+        if ([command isEqualToString:@"list"]) {
             if (argc == 3) {
                 NSString * listFilter = [NSString stringWithUTF8String:argv[2]];
                 listFilterArgumentsFor(listFilter);
@@ -663,90 +733,66 @@ int main(int argc, const char * argv[]) {
                 listFilters();
             }
             return 0;
-        } else if ([filterName isEqualToString:@"help"] || [filterName isEqualToString:@"-h"]) {
+        } else if ([command isEqualToString:@"help"] || [filterName isEqualToString:@"-h"]) {
             help();
             return 0;
-        } else if ([filterName isEqualToString:@"version"] || [filterName isEqualToString:@"-v"]) {
+        } else if ([command isEqualToString:@"version"] || [filterName isEqualToString:@"-v"]) {
             version();
             return 0;
         }
-        if ([[filterName substringToIndex:2] isEqualToString:@"CI"] == NO) {
-            usage();
-            throwException(@"Expecting Core Image Filter");
-        }
-        
-        /* Get required output location (input is optional) */
-        outputPath = [args valueForKey:@"outputImage"];
-        if (outputPath) {
-            [args removeObjectForKey:@"outputImage"];
-        } else if (argc > 2) {
-            // Assume last given argument is destination.
-            outputPath = [NSString stringWithUTF8String:last];
-            if ([outputPath isEqualToString:filterName]) {
-                // This should be unreachable, but I don't trust myself.
-                message = [NSString stringWithFormat:@"Confusion %@ writes to self %@?", outputPath, filterName];
-                throwException(message);
-            }
-        }
-        outputURL = toWriteableURL(outputPath);
-        if (filterName != nil && outputPath != nil) {
-            filter = [CIFilter filterWithName:filterName];
-            if (filter) {
-                [filter setDefaults];
-                
-                inputKeys = [filter inputKeys];
-                for (key in inputKeys) {
-                    properties = [[filter attributes] valueForKey:key];
-                    _type = [properties valueForKey:kCIAttributeClass];
-                    argument = [args valueForKey:key];
-                    if (argument == nil) { continue; }
-                    if ([_type isEqualToString:@"CIImage"]) {
-                        [filter setValue:readInputImage(argument) forKey:key];
-                    } else if ([_type isEqualToString:@"NSNumber"]) {
-                        [filter setValue:@([argument doubleValue]) forKey:key];
-                    } else if ([_type isEqualToString:@"CIVector"]) {
-                        [filter setValue:readInputVector(argument) forKey:key];
-                    } else if ([_type isEqualToString:@"NSData"]) {
-                        [filter setValue:readInputMessage(argument) forKey:key];
-                    } else if ([_type isEqualToString:@"CIColor"]) {
-                        [filter setValue:readInputColor(argument) forKey:key];
-                    } else if ([_type isEqualToString:@"NSAffineTransform"]) {
-                        [filter setValue:readInputTransform(argument) forKey:key];
-                    } else if ([_type isEqualToString:@"NSString"]) {
-                        [filter setValue:argument forKey:key];
-                    } else {
-                        message = [NSString stringWithFormat:@"Don't know how to handle -%@.", key];
-                        throwException(message);
-                    }
-                }
-                
-                if (outputPath != nil) {
-                    outputImage = [filter outputImage];
-                    if (outputImage) {
-                        if (CGRectIsInfinite([outputImage extent])) {
-                            /* Attempt to read -size, as new image is unbounded */
-                            argument = [args valueForKey:@"size"];
-                            if (argument == nil) {
-                                throwException(@"Output image is infinite, did you define `-size'?");
-                            }
-                            requiredRect = readInputSize(argument);
-                            outputImage = [outputImage imageByCroppingToRect:requiredRect];
-                        }
-                        dumpToFile(outputImage, outputURL);
-                    } else {
-                        throwException(@"Unable to read resulting output image");
-                    }
-                } else {
-                    throwException(@"Missing -outputImage");
-                }
+        userFilters = parseArguments(argv, argc);
+        for (NSUInteger i = 0; i < [userFilters count]; i++) {
+            args = [userFilters objectAtIndex:i];
+            filterName = [args objectForKey:@"filter"];
+            if (filterName) {
+                [args removeObjectForKey:@"filter"];
             } else {
-                usage();
-                message = [NSString stringWithFormat:@"Core Image Filter `%@'", filterName];
+                throwException(@"Core Image Filter missing");
+            }
+            outputPath = [args valueForKey:@"outputImage"];
+            if (outputPath) {
+                [args removeObjectForKey:@"outputImage"];
+            }
+            extent = [args valueForKey:@"size"];
+            if (extent) {
+                [args removeObjectForKey:@"size"];
+            }
+            // Allocated filter
+            if ( i > 0 ) {
+                // For filter chaining
+                outputImage = [filter outputImage];
+                filter = [CIFilter filterWithName:filterName];
+                [filter setDefaults];
+                [filter setValue:outputImage forKey:kCIInputImageKey];
+            } else {
+                // Create first filter
+                filter = [CIFilter filterWithName:filterName];
+                [filter setDefaults];
+            }
+            // Check if the filter was found.
+            if (filter == nil) {
+                message = [NSString stringWithFormat:@"Unknown filter `%@'", filterName];
                 throwException(message);
             }
-        } else {
-            usage();
-            RETURN_VALUE = 1;
+            // Apply all given input arguments to filter.
+            filterApply(filter, args);
+            // Check if we are writing output.
+            if (outputPath != nil) {
+                outputURL = toWriteableURL(outputPath);
+                outputImage = [filter outputImage];
+                if (outputImage) {
+                    if (CGRectIsInfinite([outputImage extent])) {
+                        /* Attempt to read -size, as new image is unbounded */
+                        if (extent == nil) {
+                            throwException(@"Output image is infinite, did you define `-size'?");
+                        }
+                        outputImage = [outputImage imageByCroppingToRect:readInputSize(extent)];
+                    }
+                    dumpToFile(outputImage, outputURL);
+                } else {
+                    throwException(@"Unable to read resulting output image");
+                }
+            }
         }
     } // @ try
     @catch (NSException * err) {
