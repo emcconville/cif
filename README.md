@@ -61,7 +61,7 @@ copied to your `.bashrc`, or `.bash_profile` file. Tab behavior as follows:
 
     cif CIBl[TAB]
     # Will list available matching filters
-    cif CIBlool -input[TAB]
+    cif CIBloom -input[TAB]
     # Will list available input paramaters
 
 Note: Mileage will very based on environment configuration.
