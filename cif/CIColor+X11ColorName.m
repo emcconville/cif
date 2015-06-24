@@ -111,6 +111,7 @@ NSArray * (^colorFunctionToArray)(NSString *) = ^(NSString * input)
                               @"antiquewhite2" : @"[0.933333 0.87451 0.8]",
                               @"antiquewhite3" : @"[0.803922 0.752941 0.690196]",
                               @"antiquewhite4" : @"[0.545098 0.513725 0.470588]",
+                              @"aqua" : @"[0 1 1]", // Same as Cyan
                               @"aquamarine" : @"[0.498039 1 0.831373]",
                               @"aquamarine1" : @"[0.498039 1 0.831373]",
                               @"aquamarine2" : @"[0.462745 0.933333 0.776471]",
@@ -243,6 +244,7 @@ NSArray * (^colorFunctionToArray)(NSString *) = ^(NSString * input)
                               @"firebrick4" : @"[0.545098 0.101961 0.101961]",
                               @"floralwhite" : @"[1 0.980392 0.941176]",
                               @"forestgreen" : @"[0.133333 0.545098 0.133333]",
+                              @"fuchsia" : @"[1 0 1]", // Alias to magenta
                               @"gainsboro" : @"[0.862745 0.862745 0.862745]",
                               @"ghostwhite" : @"[0.972549 0.972549 1]",
                               @"gold" : @"[1 0.843137 0]",
@@ -551,6 +553,7 @@ NSArray * (^colorFunctionToArray)(NSString *) = ^(NSString * input)
                               @"lightyellow2" : @"[0.933333 0.933333 0.819608]",
                               @"lightyellow3" : @"[0.803922 0.803922 0.705882]",
                               @"lightyellow4" : @"[0.545098 0.545098 0.478431]",
+                              @"lime" : @"[0 1 0]",
                               @"limegreen" : @"[0.196078 0.803922 0.196078]",
                               @"linen" : @"[0.980392 0.941176 0.901961]",
                               @"magenta" : @"[1 0 1]",
@@ -655,6 +658,7 @@ NSArray * (^colorFunctionToArray)(NSString *) = ^(NSString * input)
                               @"purple2" : @"[0.568627 0.172549 0.933333]",
                               @"purple3" : @"[0.490196 0.14902 0.803922]",
                               @"purple4" : @"[0.333333 0.101961 0.545098]",
+                              @"rebeccapurple" : @"[0.4 0.2 0.6]", // Respect
                               @"red" : @"[1 0 0]",
                               @"red1" : @"[1 0 0]",
                               @"red2" : @"[0.933333 0 0]",
@@ -692,6 +696,7 @@ NSArray * (^colorFunctionToArray)(NSString *) = ^(NSString * input)
                               @"sienna2" : @"[0.933333 0.47451 0.258824]",
                               @"sienna3" : @"[0.803922 0.407843 0.223529]",
                               @"sienna4" : @"[0.545098 0.278431 0.14902]",
+                              @"silver" : @"[0.75 0.75 0.75]",
                               @"skyblue" : @"[0.529412 0.807843 0.921569]",
                               @"skyblue1" : @"[0.529412 0.807843 1]",
                               @"skyblue2" : @"[0.494118 0.752941 0.933333]",
