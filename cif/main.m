@@ -89,6 +89,7 @@ NSMutableArray * parseArguments(const char * argv[], int argc)
     NSString * keyword, * value;
     NSMutableDictionary * kwargs = [[NSMutableDictionary alloc] init];
     NSMutableArray * stack = [[NSMutableArray alloc] init];
+    NSArray * filters = [CIFilter filterNamesInCategories:nil];
     for (int index = 1; index < argc; index++) {
         keyword = [NSString stringWithUTF8String:argv[index]];
         if ([keyword hasPrefix:@"-"] && [keyword length] > 1) {
@@ -101,7 +102,7 @@ NSMutableArray * parseArguments(const char * argv[], int argc)
             }
             value = [NSString stringWithUTF8String:argv[index]];
             keyword = [keyword substringFromIndex:1];
-        } else if ([kwargs count] == 0 && [keyword hasPrefix:@"CI"]) {
+        } else if ([filters indexOfObject:keyword] != NSNotFound) {
             // Assume first instance ommits `-filter'
             value = keyword;
             keyword = @"filter";
@@ -478,38 +479,16 @@ void (^dumpToSTDERR)(NSString *) = ^(NSString * str)
  */
 void listFilters()
 {
-    NSMutableArray * filters = [NSMutableArray array];
-    NSArray * categories = [NSArray arrayWithObjects:
-                            kCICategoryBlur,
-                            kCICategoryColorAdjustment,
-                            kCICategoryColorEffect,
-                            kCICategoryCompositeOperation,
-                            kCICategoryDistortionEffect,
-                            kCICategoryGenerator,
-                            kCICategoryGradient,
-                            kCICategoryHalftoneEffect,
-                            kCICategoryReduction,
-                            kCICategorySharpen,
-                            kCICategoryStylize,
-                            kCICategoryTileEffect,
-                            kCICategoryTransition,
-                            nil];
-    for (NSString * category in categories) {
-        [filters addObjectsFromArray:[CIFilter filterNamesInCategory:category]];
-        if ([filters count] > 0) {
-            for (NSString * filter in filters) {
-                dumpToSTDOUT([NSString stringWithFormat:@"%@\n", filter]);
-            }
-        }
-        [filters removeAllObjects];
+    for (NSString * filter in [CIFilter filterNamesInCategories:nil]) {
+        dumpToSTDOUT([NSString stringWithFormat:@"%@\n", filter]);
     }
-    
 }
 
 void listFilterArgumentsFor(NSString * filterName)
 {
     CIFilter * f = [CIFilter filterWithName:filterName];
-    NSString * message = [NSString stringWithFormat:@"%@\n%@\n%@\n\n", filterName, [[[NSString alloc] init] stringByPaddingToLength:[filterName length] withString:@"-" startingAtIndex:0],[CIFilter localizedDescriptionForFilterName:filterName]];
+    NSString * padding = [[[NSString alloc] init] stringByPaddingToLength:[filterName length] withString:@"-" startingAtIndex:0];
+    NSString * message = [NSString stringWithFormat:@"\n%@\n%@\n%@\n\n", filterName, padding, [CIFilter localizedDescriptionForFilterName:filterName]];
     dumpToSTDOUT(message);
     NSDictionary * a = [f attributes];
     for ( NSString * attr in a  ) {
@@ -570,6 +549,46 @@ void listFilterArgumentsFor(NSString * filterName)
     dumpToSTDOUT(@"\n");
 }
 
+#pragma mark - Boot World
+
+void loadCifBundles()
+{
+    /* Prototype locals */
+    NSBundle * package;
+    Class principalClass;
+    NSString
+        * directory,
+        * cifBundleDir = @"Application Support/cif/Filters",
+        * currentPath = nil,
+        * currentBundlePath = nil;
+    NSArray * searchPath;
+    NSEnumerator
+        * searchEnum,
+        * dirEnum;
+    // Search ~/Library, /System/Library, and /Network/Library
+    searchPath = NSSearchPathForDirectoriesInDomains(NSLibraryDirectory,
+                                                     NSAllDomainsMask - NSSystemDomainMask,
+                                                     YES);
+    searchEnum = [searchPath objectEnumerator];
+    while (currentPath = [searchEnum nextObject]) {
+        directory = [currentPath stringByAppendingPathComponent:cifBundleDir];
+        dirEnum = [[NSFileManager defaultManager] enumeratorAtPath:directory];
+        while ( currentBundlePath =  [dirEnum nextObject]) {
+            if ([currentBundlePath hasSuffix:@".bundle"]) {
+                currentPath = [directory stringByAppendingPathComponent:currentBundlePath];
+                // Load bundle
+                package = [NSBundle bundleWithPath:currentPath];
+                if ([package load]) {
+                    // Initialize principal class (if given)
+                    principalClass = [package principalClass];
+                    if (principalClass) {
+                        (void)[[principalClass alloc] init];
+                    } // principalClass
+                } // package load
+             } // SomeName.bundle
+        } // In Filters
+    } // Search path
+}
 
 #pragma mark - Application
 
@@ -577,7 +596,7 @@ void listFilterArgumentsFor(NSString * filterName)
 #define str(s) #s
 
 #ifndef CIF_VERSION
-#define CIF_VERSION 1.0
+#define CIF_VERSION "1.dev"
 #endif
 
 #ifndef CIF_RELEASE_DATE
@@ -671,6 +690,19 @@ void filterApply(CIFilter * filter, NSMutableDictionary *args)
     NSDictionary * properties;
     NSString * argument, * key, * valueType, * message;
     [filter setDefaults];
+    NSMutableSet * inputKeys = [NSMutableSet setWithArray:[filter inputKeys]];
+    NSMutableSet * userGiven = [NSMutableSet setWithArray:[args allKeys]];
+    [userGiven minusSet:inputKeys];
+    if ([userGiven count] > 0) {
+        NSMutableString * userKeyError = [NSMutableString string];
+        for ( key in userGiven ) {
+            message = [NSString stringWithFormat:@"`-%@'\n", key];
+            [userKeyError appendString:message];
+        }
+        message = [NSString stringWithFormat:@"Unknown filter key:\n%@See `cif list %@'", userKeyError, [filter className]];
+        throwException(message);
+    }
+    
     for (key in [filter inputKeys]) {
         properties = [[filter attributes] valueForKey:key];
         valueType = [properties valueForKey:kCIAttributeClass];
@@ -721,9 +753,11 @@ int main(int argc, const char * argv[]) {
         NSArray * userFilters;
         
         @try {
+            /** Boot world **/
+            loadCifBundles();
         /** Read user input **/
         
-        /** Get required filter operation **/
+        /** Scann for special commands **/
         command = [NSString stringWithUTF8String:argv[1]];
         if ([command isEqualToString:@"list"]) {
             if (argc == 3) {
@@ -740,8 +774,9 @@ int main(int argc, const char * argv[]) {
             version();
             return 0;
         }
+
         userFilters = parseArguments(argv, argc);
-        for (NSUInteger i = 0; i < [userFilters count]; i++) {
+        for (NSUInteger i = 0; i < [userFilters count]; ) {
             args = [userFilters objectAtIndex:i];
             filterName = [args objectForKey:@"filter"];
             if (filterName) {
@@ -776,6 +811,7 @@ int main(int argc, const char * argv[]) {
             }
             // Apply all given input arguments to filter.
             filterApply(filter, args);
+            i++;
             // Check if we are writing output.
             if (outputPath != nil) {
                 outputURL = toWriteableURL(outputPath);
@@ -791,7 +827,10 @@ int main(int argc, const char * argv[]) {
                     dumpToFile(outputImage, outputURL);
                 } else {
                     throwException(@"Unable to read resulting output image");
-                }
+                } // if output image
+            } else if (i == [userFilters count]) {
+                // No output
+                throwException(@"Output image is missing");
             }
         }
     } // @ try
