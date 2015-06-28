@@ -13,7 +13,7 @@ For pre-built binaries, checkout
 
 ## Usage
 
-Basic usage can be described s ...
+Basic usage can be described as ...
 
     cif <filter> [arguments, ...] <output>
 
@@ -52,7 +52,7 @@ Cif tries to be smart, so `-filter` & `-output` can be omitted.
         CIBloom out.png
 
 
-### Color Function
+### Color Functions
 
 Common CSS color functions are supported.
 
