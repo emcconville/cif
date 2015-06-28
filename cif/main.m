@@ -12,6 +12,7 @@
 #import "CIColor+X11ColorName.h"
 #import "CIImage+PatternName.h"
 
+
 #pragma mark Exceptions
 
 /**
@@ -32,7 +33,7 @@ void (^throwException)(NSString *) = ^(NSString *message) {
 
 /**
  * @brief Helper method to convert NSString to NSURL
- * @discussion Given string of "STDIN" & "STDOUT" will be converted to system
+ * @discussion Given string of "STDOUT" will be converted to system
  *             file descriptors. Does not check to see if filename is reachable.
  * @param filename Path to convert to URL
  * @return NSURL
@@ -61,8 +62,12 @@ NSURL * (^toReadableURL)(NSString *) = ^(NSString * filename)
 {
     NSURL * uri = toURL(filename);
     NSError * err;
+    NSString * message;
     if ([uri checkResourceIsReachableAndReturnError:&err] == NO) {
-        NSString * message = [NSString stringWithFormat:@"%ld :: %@", [err code], [err domain]];
+        message = [NSString stringWithFormat:@"%ld :: %@\n%@",
+                   [err code],
+                   [err domain],
+                   [err localizedDescription]];
         throwException(message);
     }
     return uri;
@@ -164,12 +169,14 @@ CIImage * (^readInputImage)(NSString *) = ^(NSString * filename) {
     CIImage * source;
     /* Scan for known pattern prefix */
     NSString * patternProtocol = @"pattern:";
-    NSUInteger patternLength= [patternProtocol length];
+    NSUInteger patternLength= [patternProtocol length]; // TODO refactro this
     if ([filename length] > patternLength && [[filename substringToIndex:patternLength] caseInsensitiveCompare:patternProtocol] == NSOrderedSame) {
         source = [CIImage imageWithName:[filename substringFromIndex:patternLength]];
-    } else if ([filename caseInsensitiveCompare:@"stdin"] == NSOrderedSame) {
+    } else if ([filename caseInsensitiveCompare:@"STDIN"] == NSOrderedSame) {
         source = readStandardInputImage();
-    }else {
+    } else if ([filename isEqualToString:@"-"]) {
+        source = readStandardInputImage();
+    } else {
         NSURL * uri = toReadableURL(filename);
         source = [CIImage imageWithContentsOfURL:uri];
     }
@@ -651,7 +658,7 @@ static const char * _help = "\n"
 "-----\n"
 "\n"
 "<image>         A system path, or URL, to an image resource.\n"
-"                Use `STDIN' to read image from stdard input.\n"
+"                Use `STDIN', or `-', to read image from stdard input.\n"
 "<data>          UTF-8 string message. If the first character is an at-sign (@)\n"
 "                then argument is assumed to be a path to a file to read data\n"
 "                from.\n"
