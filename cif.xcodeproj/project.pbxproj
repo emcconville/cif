@@ -11,6 +11,8 @@
 		092558EB1B3104AC0083F797 /* QuartzCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 092558EA1B3104AC0083F797 /* QuartzCore.framework */; };
 		092558F11B3185FF0083F797 /* CIColor+X11ColorName.m in Sources */ = {isa = PBXBuildFile; fileRef = 092558F01B3185FF0083F797 /* CIColor+X11ColorName.m */; };
 		092558F41B3242BF0083F797 /* CIImage+PatternName.m in Sources */ = {isa = PBXBuildFile; fileRef = 092558F31B3242BF0083F797 /* CIImage+PatternName.m */; };
+		099F1DBC1B41701F004DA810 /* cifio.m in Sources */ = {isa = PBXBuildFile; fileRef = 099F1DBA1B41701F004DA810 /* cifio.m */; };
+		099F1DBF1B417122004DA810 /* ciferr.m in Sources */ = {isa = PBXBuildFile; fileRef = 099F1DBD1B417122004DA810 /* ciferr.m */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -35,6 +37,10 @@
 		092558F31B3242BF0083F797 /* CIImage+PatternName.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "CIImage+PatternName.m"; sourceTree = "<group>"; };
 		092558F51B32EF190083F797 /* README.md */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = SOURCE_ROOT; };
 		092558F81B3357A40083F797 /* CifGetOpt.sh */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; path = CifGetOpt.sh; sourceTree = "<group>"; };
+		099F1DBA1B41701F004DA810 /* cifio.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = cifio.m; sourceTree = "<group>"; };
+		099F1DBB1B41701F004DA810 /* cifio.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = cifio.h; sourceTree = "<group>"; };
+		099F1DBD1B417122004DA810 /* ciferr.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = ciferr.m; sourceTree = "<group>"; };
+		099F1DBE1B417122004DA810 /* ciferr.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ciferr.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -75,6 +81,10 @@
 				092558F21B3242BF0083F797 /* CIImage+PatternName.h */,
 				092558F31B3242BF0083F797 /* CIImage+PatternName.m */,
 				092558E31B31041C0083F797 /* main.m */,
+				099F1DBA1B41701F004DA810 /* cifio.m */,
+				099F1DBB1B41701F004DA810 /* cifio.h */,
+				099F1DBD1B417122004DA810 /* ciferr.m */,
+				099F1DBE1B417122004DA810 /* ciferr.h */,
 			);
 			path = cif;
 			sourceTree = "<group>";
@@ -145,7 +155,9 @@
 			buildActionMask = 2147483647;
 			files = (
 				092558F41B3242BF0083F797 /* CIImage+PatternName.m in Sources */,
+				099F1DBF1B417122004DA810 /* ciferr.m in Sources */,
 				092558F11B3185FF0083F797 /* CIColor+X11ColorName.m in Sources */,
+				099F1DBC1B41701F004DA810 /* cifio.m in Sources */,
 				092558E41B31041C0083F797 /* main.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
