@@ -10,7 +10,7 @@
 #include "CIColor+X11ColorName.h"
 #include "CIImage+PatternName.h"
 
-#pragma mark Convert helpers
+#pragma mark - Convert helpers
 
 NSURL * toURL(NSString * filename)
 {
@@ -45,7 +45,7 @@ NSURL * toWriteableURL(NSString * filename)
 };
 
 
-#pragma mark Input
+#pragma mark - Input
 
 NSMutableArray * parseArguments(const char * argv[], int argc)
 {
@@ -290,13 +290,14 @@ NSAffineTransform * readInputTransform(NSString * token)
 };
 
 
-#pragma mark Output
+#pragma mark - Output
 
 void dumpToFile(CIImage * source, NSURL * uri)
 {
     NSData * blob;
     NSBitmapImageRep * rep = [[NSBitmapImageRep alloc] initWithCIImage:source];
     NSString * ext = [uri pathExtension];
+    NSString * message;
     if ([ext caseInsensitiveCompare:@"PNG"] == NSOrderedSame) {
         blob = [rep representationUsingType:NSPNGFileType properties:nil];
     } else if ([ext caseInsensitiveCompare:@"JPG"] == NSOrderedSame
@@ -314,13 +315,13 @@ void dumpToFile(CIImage * source, NSURL * uri)
         // handle anonymous formats. PNG being the correct OS default.
         blob = [rep representationUsingType:NSPNGFileType properties:nil];
     } else {
-        NSString * message = [NSString stringWithFormat:@"Don't know how to write to %@ format", [ext uppercaseString]];
+        message = [NSString stringWithFormat:@"Don't know how to write to %@ format", [ext uppercaseString]];
         throwException(message);
     }
     if (blob) {
         BOOL okay = [blob writeToURL:uri atomically:NO];
         if (!okay) {
-            NSString * message = [NSString stringWithFormat:@"Unable to write to %@", uri];
+            message = [NSString stringWithFormat:@"Unable to write to %@", uri];
             throwException(message);
         }
     }
@@ -348,6 +349,9 @@ void listFilters()
 void listFilterArgumentsFor(NSString * filterName)
 {
     CIFilter * f = [CIFilter filterWithName:filterName];
+    if (f == nil) {
+        throwException([filterName stringByAppendingString:@": Unkown filter"]);
+    }
     NSString * padding = [[[NSString alloc] init] stringByPaddingToLength:[filterName length] withString:@"-" startingAtIndex:0];
     NSString * message = [NSString stringWithFormat:@"\n%@\n%@\n%@\n\n", filterName, padding, [CIFilter localizedDescriptionForFilterName:filterName]];
     dumpToSTDOUT(message);
@@ -441,10 +445,9 @@ void loadCifBundles()
                 package = [NSBundle bundleWithPath:currentPath];
                 if ([package load]) {
                     // Initialize principal class (if given)
+                    // This will call +initialize on main class, but not create
+                    // run-time instance.
                     principalClass = [package principalClass];
-                    if (principalClass) {
-                        (void)[[principalClass alloc] init];
-                    } // principalClass
                 } // package load
             } // SomeName.bundle
         } // In Filters
