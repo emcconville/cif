@@ -201,7 +201,6 @@ void dumpToSTDERR(NSString * str);
 /**
  * @brief Display all CIFilters
  * @discussion Limited list of filters by category.
- * @todo Build complete list
  */
 void listFilters();
 

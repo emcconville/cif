@@ -110,18 +110,19 @@ CIImage * readStandardInputImage()
 CIImage * readInputImage(NSString * filename)
 {
     CIImage * source;
-    /* Scan for known pattern prefix */
-    NSString * patternProtocol = @"pattern:";
-    NSUInteger patternLength= [patternProtocol length]; // TODO refactro this
-    if ([filename length] > patternLength && [[filename substringToIndex:patternLength] caseInsensitiveCompare:patternProtocol] == NSOrderedSame) {
-        source = [CIImage imageWithName:[filename substringFromIndex:patternLength]];
-    } else if ([filename caseInsensitiveCompare:@"STDIN"] == NSOrderedSame) {
+    if ([filename caseInsensitiveCompare:@"STDIN"] == NSOrderedSame) {
         source = readStandardInputImage();
     } else if ([filename isEqualToString:@"-"]) {
         source = readStandardInputImage();
     } else {
-        NSURL * uri = toReadableURL(filename);
-        source = [CIImage imageWithContentsOfURL:uri];
+        /* Scan for known pattern prefix */
+        if ([filename hasPrefix:@"pattern:"]
+            || [filename hasPrefix:@"PATTERN:"]) {
+            source = [CIImage imageWithName:[filename substringFromIndex:8]];
+        } else {
+            // attempt to read from system
+            source = [CIImage imageWithContentsOfURL:toReadableURL(filename)];
+        }
     }
     if (source == nil) {
         throwException(@"Unable to read input image");
@@ -150,7 +151,10 @@ NSData * readInputMessage(NSString * message)
 
 CIVector * readInputVector(NSString * token)
 {
-    NSString * vectorFormat = [[NSString stringWithFormat:@"[%@]", token] stringByReplacingOccurrencesOfString:@"," withString:@" "];
+    NSString * vectorFormat;
+    vectorFormat = [NSString stringWithFormat:@"[%@]", token];
+    vectorFormat = [vectorFormat stringByReplacingOccurrencesOfString:@","
+                                                           withString:@" "];
     return [CIVector vectorWithString:vectorFormat];
 };
 
