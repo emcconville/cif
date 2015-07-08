@@ -57,12 +57,13 @@ static const char * _help = "\n"
 "Types\n"
 "-----\n"
 "\n"
-"<image>         A system path, or URL, to an image resource.\n"
-"                Use `STDIN', or `-', to read image from stdard input.\n"
+"<image>         A system path, or URL, to an image resource. Common image\n"
+"                formats, like TIFF, JPEG, and PNG, are supported.\n"
+"                Use `STDIN', or `-', to read image from standard input.\n"
 "<data>          UTF-8 string message. If the first character is an at-sign (@)\n"
 "                then argument is assumed to be a path to a file to read data\n"
 "                from.\n"
-"<number>        A literal number. Integreals, and rational numbers are\n"
+"<number>        A literal number. Integrals, and rational numbers are\n"
 "                expected.\n"
 "<vector>        A comma-separated list of numbers.\n"
 "                Example: \n"
@@ -80,7 +81,7 @@ static const char * _help = "\n"
 "                    hsl(300,100%,50%) : HSL color function\n"
 "                    hsla(300,100%,50%,1.0) : HSL color function with alpha\n"
 "<affinetransform>\n"
-"                A common affine-transfromation function. Supported fromats\n"
+"                A common affine-transformation function. Supported formats\n"
 "                are:\n"
 "                    matrix(m11,m12,m21,m22,tX,tY)\n"
 "                    rotate(D)\n"
@@ -88,6 +89,22 @@ static const char * _help = "\n"
 "                    scale(X)\n"
 "                    scale(X,Y)\n"
 "                    translate(X,Y)\n"
+"\n"
+"Infinite Generators\n"
+"-------------------\n"
+"Some filters, and generators, create unbounded/infinite images that can not\n"
+"be saved to a image file. Providing a `-size <width>x<height>` argument will\n"
+"bind the image to the correct size.\n"
+"\n"
+"    cif CIKaleidoscope -inputImage input.png -size 100x100 output.png\n"
+"\n"
+"Examples\n"
+"--------\n"
+"\n"
+"  cif CIComicEffect -inputImage input.png output.png\n"
+"  cif CIDiscBlur -inputImage STDIN -inputRadius 20 output.tif < input.jpg\n"
+"  cif CIStripesGenerator -size 100x100 -inputWidth 10 -inputSharpness 0 \\\n"
+"      -inputColor0 \"rgbA(255,0,0,0.1)\"  -inputColor1 BLACK result.png\n"
 "\n"
 ;
 
@@ -168,7 +185,7 @@ int main(int argc, const char * argv[]) {
             loadCifBundles();
         /** Read user input **/
         
-        /** Scann for special commands **/
+        /** Scan for special commands **/
         command = [NSString stringWithUTF8String:argv[1]];
         if ([command isEqualToString:@"list"]) {
             if (argc == 3) {
@@ -178,10 +195,16 @@ int main(int argc, const char * argv[]) {
                 listFilters();
             }
             return 0;
-        } else if ([command isEqualToString:@"help"] || [filterName isEqualToString:@"-h"]) {
+        } else if ([command isEqualToString:@"help"]) {
             help();
             return 0;
-        } else if ([command isEqualToString:@"version"] || [filterName isEqualToString:@"-v"]) {
+        } else if ([command isEqualToString:@"-h"]) {
+            help();
+            return 0;
+        } else if ([command isEqualToString:@"version"]) {
+            version();
+            return 0;
+        } else if ([command isEqualToString:@"-v"]) {
             version();
             return 0;
         }
@@ -231,7 +254,7 @@ int main(int argc, const char * argv[]) {
                     if (CGRectIsInfinite([outputImage extent])) {
                         /* Attempt to read -size, as new image is unbounded */
                         if (extent == nil) {
-                            throwException(@"Output image is infinite, did you define `-size'?");
+                            throwException(@"Output image is infinite. Please difine `-size <width>x<height>' argument.");
                         }
                         outputImage = [outputImage imageByCroppingToRect:readInputSize(extent)];
                     }
