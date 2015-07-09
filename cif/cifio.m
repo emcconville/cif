@@ -298,7 +298,8 @@ void dumpToFile(CIImage * source, NSURL * uri)
     NSBitmapImageRep * rep = [[NSBitmapImageRep alloc] initWithCIImage:source];
     NSString * ext = [uri pathExtension];
     NSString * message;
-    if ([ext caseInsensitiveCompare:@"PNG"] == NSOrderedSame) {
+    BOOL isStdOut = [[uri absoluteString] isEqualTo:@"file:///dev/stdout"];
+    if ([ext caseInsensitiveCompare:@"PNG"] == NSOrderedSame || isStdOut) {
         blob = [rep representationUsingType:NSPNGFileType properties:nil];
     } else if ([ext caseInsensitiveCompare:@"JPG"] == NSOrderedSame
                || [ext caseInsensitiveCompare:@"JPEG"] == NSOrderedSame) {
@@ -310,18 +311,14 @@ void dumpToFile(CIImage * source, NSURL * uri)
         blob = [rep representationUsingType:NSGIFFileType properties:nil];
     } else if ([ext caseInsensitiveCompare:@"BMP"] == NSOrderedSame) {
         blob = [rep representationUsingType:NSBMPFileType properties:nil];
-    } else if ([[uri description] isEqualTo:@"file:///dev/stdout"]) {
-        // Let's default to PNG until we can figure out how we should
-        // handle anonymous formats. PNG being the correct OS default.
-        blob = [rep representationUsingType:NSPNGFileType properties:nil];
     } else {
         message = [NSString stringWithFormat:@"Don't know how to write to %@ format", [ext uppercaseString]];
         throwException(message);
     }
     if (blob) {
         BOOL okay = [blob writeToURL:uri atomically:NO];
-        if (!okay) {
-            message = [NSString stringWithFormat:@"Unable to write to %@", uri];
+        if (!okay && !isStdOut) {
+            message = [NSString stringWithFormat:@"Unable to write to %@", [uri absoluteString]];
             throwException(message);
         }
     }
