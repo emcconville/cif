@@ -98,13 +98,22 @@ static const char * _help = "\n"
 "\n"
 "    cif CIKaleidoscope -inputImage input.png -size 100x100 output.png\n"
 "\n"
+"Filter Chaining\n"
+"---------------\n"
+"Multiple filters can be applied in one operation. When cif sees an additional\n"
+"filter-argument, it assumes the resulting output image of the previous filter\n"
+"will be the `-inputImage` argument of the following filter.\n"
+"\n"
+"    cif CIVibrance -inputImage input.jpg -inputAmount 50  \\\n"
+"        CIBloom -inputRadius 8 -inputIntensity 1.2 out.jpg\n"
+"\n"
 "Examples\n"
 "--------\n"
 "\n"
-"  cif CIComicEffect -inputImage input.png output.png\n"
-"  cif CIDiscBlur -inputImage - -inputRadius 20 output.tif < input.jpg\n"
-"  cif CIStripesGenerator -size 100x100 -inputWidth 10 -inputSharpness 0 \\\n"
-"      -inputColor0 \"rgbA(255,0,0,0.1)\"  -inputColor1 BLACK result.png\n"
+"    cif CIComicEffect -inputImage input.png output.png\n"
+"    cif CIDiscBlur -inputImage - -inputRadius 20 output.tif < input.jpg\n"
+"    cif CIStripesGenerator -size 100x100 -inputWidth 10 -inputSharpness 0 \\\n"
+"        -inputColor0 \"rgbA(255,0,0,0.1)\"  -inputColor1 BLACK result.png\n"
 "\n"
 ;
 
@@ -254,7 +263,7 @@ int main(int argc, const char * argv[]) {
                     if (CGRectIsInfinite([outputImage extent])) {
                         /* Attempt to read -size, as new image is unbounded */
                         if (extent == nil) {
-                            throwException(@"Output image is infinite. Please difine `-size <width>x<height>' argument.");
+                            throwException(@"Output image is infinite. Please define `-size <width>x<height>' argument.");
                         }
                         outputImage = [outputImage imageByCroppingToRect:readInputSize(extent)];
                     }
